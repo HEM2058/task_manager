@@ -1,0 +1,118 @@
+{% csrf_token %}
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Load Leaflet CSS and JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+
+  <!-- Load Leaflet Draw CSS and JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+  <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+  <style>
+    #mapid { /* specify map height */
+      height: 100vh;
+    }
+    @media only screen and (max-width: 600px) { /* make map responsive */
+      #mapid {
+        height: 100vh;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div id="mapid"></div>
+
+<script>
+  // initialize Leaflet map
+  var mymap = L.map('mapid').setView([28.3949, 84.1240], 5);
+
+  // add OpenStreetMap tile layer
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: 'Map data © <a href="https://openstreetmap.org">OpenStreetMap</a> contributors',
+    maxZoom: 18,
+  }).addTo(mymap);
+
+// initialize Leaflet Draw plugin
+var drawLayer = new L.FeatureGroup();
+mymap.addLayer(drawLayer);
+var drawControl = new L.Control.Draw({
+  draw: {
+    polyline: false, /* disable polyline */
+    circlemarker: false, /* disable circlemarker */
+    polygon: {
+      allowIntersection: false, /* disallow intersections */
+      drawError: {
+        color: '#b00b00', /* error color */
+        message: '<strong>Error:</strong> shape edges cannot cross!', /* error message */
+      },
+      shapeOptions: {
+        color: '#3388ff', /* shape color */
+        weight: 4, /* shape weight */
+      },
+    },
+    rectangle: {
+      shapeOptions: {
+        color: '#3388ff',
+        weight: 4,
+      },
+    },
+  },
+  edit: {
+    featureGroup: drawLayer,
+    edit: true, /* disable editing */
+    remove: true, /* enable removing */
+  },
+});
+mymap.addControl(drawControl);
+
+// listen for draw events
+mymap.on('draw:created', function(e) {
+  var layer = e.layer;
+  drawLayer.addLayer(layer);
+  layer.bindPopup(`<p>${JSON.stringify(layer.toGeoJSON())}</p>`)
+  // serialize GeoJSON data and send to server
+  var featureCollection = drawLayer.toGeoJSON();
+  console.log(drawLayer.toGeoJSON());
+  var data = {
+    featureCollection: featureCollection,
+  };
+ 
+
+  fetch('/api/save-feature', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(data.featureCollection.features)
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error('Failed to save feature');
+    }
+    console.log('Feature saved successfully');
+  })
+  .catch(error => {
+    console.error(error);
+  });
+});
+// alert display
+{% if msg %}
+swal({
+title: "Welcome !!!",
+text: '{{msg}}',
+icon: "success",
+timer: 2000,
+buttons: false
+});
+{% endif %}
+</script>
+
+</body>
+</html>
