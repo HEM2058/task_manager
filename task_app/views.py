@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render,redirect
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
@@ -7,7 +7,25 @@ from django.core.exceptions import ObjectDoesNotExist
 # Create your views here.
 
 def Index(request):
-    return render(request,'index.html')
+    id = request.session.get('id')
+    user = User.objects.get(id=id)
+    try:
+      assigned_polygon = AssignedPolygon.objects.get(assigned_user=user)  # Replace with the appropriate query to retrieve the desired polygon
+    except ObjectDoesNotExist:
+        return render(request,'index.html')
+    
+    
+    if assigned_polygon.polygon:
+        polygon_center = assigned_polygon.polygon.centroid
+        # Access the center coordinates
+        center_latitude = polygon_center.y
+        center_longitude = polygon_center.x
+        polygon =  assigned_polygon.polygon
+        print("===============================================================")
+        print(center_latitude, center_longitude)
+        return render(request,'index.html',{'lat':center_latitude,'lng':center_longitude,'polygon':polygon})
+    else:
+        return render(request,'index.html')
 def LoginPage(request):
     return render(request,'login.html')
 def Login(request):
@@ -24,7 +42,7 @@ def Login(request):
         if Tuser.password == password:
             request.session['id'] = Tuser.id
             msg = f"Welcome {Tuser.name}! You have successfully logged in as Mapper"
-            return render(request, 'index.html', {'msg': msg})
+            return redirect('index')
         else:
             msg = "Please enter a valid password"
             return render(request, 'login.html', {'msg': msg})

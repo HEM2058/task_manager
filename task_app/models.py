@@ -11,7 +11,9 @@ class User(models.Model):
     email  = models.EmailField(max_length=254)
     password = models.CharField(max_length=50)
     
-
+class AssignedPolygon(models.Model):
+    polygon = models.GeometryField(null=True)
+    assigned_user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     
     
 
@@ -21,3 +23,5 @@ class DrawnFeature(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE,null=True)
     feature_type = models.CharField(max_length=50)
     feature = models.GeometryField()
+
+

@@ -31,7 +31,13 @@
 
 <script>
   // initialize Leaflet map
+  {% if lat and lng %}
+  var mymap = L.map('mapid').setView([{{ lat }}, {{ lng }}], 8);
+  var polygonCoordinates = JSON.parse('{{ polygon.geojson|escapejs }}');  // Retrieve polygon coordinates from template context
+  L.geoJSON(polygonCoordinates).addTo(mymap);
+  {% else %}
   var mymap = L.map('mapid').setView([28.3949, 84.1240], 5);
+  {% endif %}
 
   // add OpenStreetMap tile layer
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {

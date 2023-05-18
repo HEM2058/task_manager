@@ -13,3 +13,6 @@ admin.site.register(User,Useradmin)
 class DrawnFeatureAdmin(OSMGeoAdmin):
     list_display = ['id', 'feature_type']
 
+@admin.register(AssignedPolygon)
+class AssignedPolygonAdmin(OSMGeoAdmin):
+    list_display = ['id', 'assigned_user']
