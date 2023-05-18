@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
   <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
   <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@turf/turf@5/turf.min.js"></script>
   <style>
     #mapid { /* specify map height */
       height: 100vh;
@@ -35,15 +36,25 @@
   var mymap = L.map('mapid').setView([{{ lat }}, {{ lng }}], 8);
   var polygonCoordinates = JSON.parse('{{ polygon.geojson|escapejs }}');  // Retrieve polygon coordinates from template context
   L.geoJSON(polygonCoordinates).addTo(mymap);
+  var textIcon = L.divIcon({
+    className: 'text-icon',
+    html: '<span style="color: red; font-weight: bold;">Map inside</span>'
+});
+
+// Create a custom layer with the div icon at the center coordinates
+var textLayer = L.marker([{{lat}}, {{lng}}], {
+    icon: textIcon,
+    interactive: true
+}).addTo(mymap);
   {% else %}
   var mymap = L.map('mapid').setView([28.3949, 84.1240], 5);
   {% endif %}
 
   // add OpenStreetMap tile layer
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: 'Map data © <a href="https://openstreetmap.org">OpenStreetMap</a> contributors',
-    maxZoom: 18,
-  }).addTo(mymap);
+  googleSat = L.tileLayer('http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',{
+    maxZoom: 20,
+    subdomains:['mt0','mt1','mt2','mt3']
+}).addTo(mymap);
 
 // initialize Leaflet Draw plugin
 var drawLayer = new L.FeatureGroup();
@@ -78,36 +89,45 @@ var drawControl = new L.Control.Draw({
 });
 mymap.addControl(drawControl);
 
-// listen for draw events
+// Listen for draw events
 mymap.on('draw:created', function(e) {
   var layer = e.layer;
-  drawLayer.addLayer(layer);
-  layer.bindPopup(`<p>${JSON.stringify(layer.toGeoJSON())}</p>`)
-  // serialize GeoJSON data and send to server
-  var featureCollection = drawLayer.toGeoJSON();
-  console.log(drawLayer.toGeoJSON());
-  var data = {
-    featureCollection: featureCollection,
-  };
- 
+  var drawnShape = layer.toGeoJSON();
+  var isInsidePolygon = turf.booleanContains(polygonCoordinates, drawnShape);
 
-  fetch('/api/save-feature', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(data.featureCollection.features)
-  })
-  .then(response => {
-    if (!response.ok) {
-      throw new Error('Failed to save feature');
-    }
-    console.log('Feature saved successfully');
-  })
-  .catch(error => {
-    console.error(error);
-  });
+  if (isInsidePolygon) {
+    drawLayer.addLayer(layer);
+    layer.bindPopup(`<p>${JSON.stringify(layer.toGeoJSON())}</p>`);
+
+    // Serialize GeoJSON data and send to the server
+    var featureCollection = drawLayer.toGeoJSON();
+    console.log(drawLayer.toGeoJSON());
+    var data = {
+      featureCollection: featureCollection,
+    };
+
+    fetch('/api/save-feature', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data.featureCollection.features)
+    })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to save feature');
+        }
+        console.log('Feature saved successfully');
+      })
+      .catch(error => {
+        console.error(error);
+      });
+  } else {
+    mymap.removeLayer(layer);
+    alert('Drawing outside the assigned polygon is not allowed.');
+  }
 });
+
 // alert display
 {% if msg %}
 swal({
