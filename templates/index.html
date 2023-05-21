@@ -1,3 +1,5 @@
+{% load static%}
+
 {% csrf_token %}
 
 <!DOCTYPE html>
@@ -15,6 +17,7 @@
   <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
   <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@turf/turf@5/turf.min.js"></script>
+
   <style>
     #mapid { /* specify map height */
       height: 100vh;
@@ -29,7 +32,7 @@
 <body>
 
 <div id="mapid"></div>
-
+<script src="{% static '/seti.js' %}"></script>
 <script>
   // initialize Leaflet map
   {% if lat and lng %}
@@ -48,8 +51,12 @@ var textLayer = L.marker([{{lat}}, {{lng}}], {
 }).addTo(mymap);
   {% else %}
   var mymap = L.map('mapid').setView([28.3949, 84.1240], 5);
-  {% endif %}
+  var geojsonLayer = L.geoJSON(data);
 
+            // Add the GeoJSON layer to the map
+            geojsonLayer.addTo(map);
+  {% endif %}
+ 
   // add OpenStreetMap tile layer
   googleSat = L.tileLayer('http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',{
     maxZoom: 20,

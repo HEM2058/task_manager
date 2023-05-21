@@ -1,0 +1,9 @@
+appveyor
+build
+ci
+docs
+examples
+fiona
+scripts
+tests
+wheelhouse
